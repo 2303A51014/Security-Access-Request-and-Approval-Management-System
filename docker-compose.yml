@@ -1,0 +1,18 @@
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongo:27017/security_access
+      JWT_SECRET: local-development-secret-change-me
+      CLIENT_URL: http://localhost:5173
+    depends_on:
+      - mongo
+volumes:
+  mongo-data:
