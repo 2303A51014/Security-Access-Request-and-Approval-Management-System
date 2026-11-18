@@ -52,8 +52,11 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/auth/me', auth, (req, res) => res.json(req.user));
 
-app.get('/api/users', auth, roles('Admin'), async (req, res) => {
-  res.json(await User.find().select('-password').sort('name'));
+app.get('/api/users', auth, async (req, res) => {
+  const users = req.user.role === 'Admin'
+    ? await User.find().select('-password').sort('name')
+    : [req.user];
+  res.json(users);
 });
 
 app.get('/api/requests', auth, async (req, res) => {
@@ -94,8 +97,11 @@ app.patch('/api/requests/:id/revoke', auth, roles('Admin', 'IT Security Officer'
   res.json(request);
 });
 
-app.get('/api/audit', auth, roles('Admin', 'IT Security Officer'), async (req, res) => {
-  res.json(await AuditLog.find().populate('actor', 'name role').populate('request', 'resource status').sort('-timestamp').limit(200));
+app.get('/api/audit', auth, async (req, res) => {
+  const filter = req.user.role === 'Admin' || req.user.role === 'IT Security Officer'
+    ? {}
+    : { actor: req.user._id };
+  res.json(await AuditLog.find(filter).populate('actor', 'name role').populate({ path: 'request', select: 'resource status requester', populate: { path: 'requester', select: 'name email department' } }).sort('-timestamp').limit(200));
 });
 
 app.get('/api/reports/summary', auth, async (req, res) => {
